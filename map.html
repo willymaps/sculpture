@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8' />
+<title>Display a map</title>
+<meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+<script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="./js/mapbox-gl-dev.js"></script>
+<style>
+
+#mapInset {
+	margin:0;
+	padding:0;
+	width:100%;
+	display: block;
+	position: relative;
+}
+
+#map {
+	position:block;
+	width:100%;
+	height:700px;
+}
+
+.mapboxgl-missing-css {
+	display: none;
+}
+
+.map-overlay {
+	font-size: 12px;
+	font-family: sans-serif;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 400px;
+	padding: 10px;
+	z-index: 10;
+}
+
+#sliderHold {
+	display: block;
+	margin: 0 0 10px 0;
+	text-align: center;
+	font-size:12px;
+	line-height: 16px;
+}
+
+.map-overlay #slider {
+	width:250px;
+	margin:0 10px;
+}
+ 
+.map-overlay .map-overlay-inner p {
+	font-size:16px;
+	line-height: 22px;
+	margin: 0 0 0 10px;
+	color:#999;
+}
+
+.map-overlay .map-overlay-inner label {
+	color:#555;
+	font-weight:bold;
+}
+ 
+.map-overlay h2 {
+	line-height: 24px;
+	display: block;
+	margin: 0 0 10px;
+}
+
+@media (max-width: 800px) {
+	.map-overlay {
+		display: none;
+	}
+}
+
+</style>
+</head>
+<body>
+ 
+<div id='mapInset'>
+	<div class='map-overlay left'>
+		<div class='map-overlay-inner'>
+			<div id="sliderHold">
+				<label>10000 BCE</label><input id='slider' type='range' min='1' max='140' step='1' value='140' /><label>2100 AD</label>
+				<datalist id="sliderValues"></datalist>
+			</div>
+			<div id="sliderValuesHold">
+				<p>Year:  <label id='year'>2100</label></p>
+				<p>Population:  <label id='population'>11,213 million</label></p>
+			</div>
+		</div>
+	</div>
+	<div id='map'></div>
+</div>
+<script>
+
+var circJson;
+var toggleOverhead = false;
+var years = [];
+
+mapboxgl.accessToken = 'pk.eyJ1Ijoid2lsbGlhbWJlbmRhdmlzIiwiYSI6IlVrb3BGVzQifQ.jeHxDCnpXXvAXKfAFEYG-A';
+var map = new mapboxgl.Map({
+	container: 'map',
+	style: 'mapbox://styles/mapbox/empty-v8',
+	center: [-0, 9],
+	pitch: 80,
+	zoom: 5.64,
+	interactive: false
+});
+
+
+function getRadius(area) {
+	return Math.sqrt( area / Math.PI)
+}
+
+map.on('click', function () {
+
+	if (toggleOverhead == false) {
+		toggleOverhead = true;
+		map.flyTo({
+			center:[-0.1,0.1],
+			pitch:0,
+			zoom:7.6,
+			speed:0.8
+		});
+	} else {
+		toggleOverhead = false;
+		map.flyTo({
+			center: [-0, 9],
+			pitch: 80,
+			zoom: 5.64,
+			speed:0.8
+		});
+	}
+});
+
+function buildShape(y) {
+
+	for (let i = 0; i <= y.length; i++) {
+		// console.log('y', y[i]);
+		let yearFilter = y[i].id;
+		let yearNum = y[i].year;
+		let yearPop = y[i].pop;
+		let filters = ['<=', 'geo_id', yearFilter];
+		let speed = 50;
+        (function(index) {
+            let animateTimeout = setTimeout(function() {
+	 
+				if (yearNum <= 0 ) {
+					document.getElementById('year').textContent = yearNum*-1 + ' BCE';
+				} else {
+					document.getElementById('year').textContent = yearNum;	
+				}
+
+				document.getElementById('population').textContent = formatNumber(yearPop) + ' million';
+
+            
+			map.setFilter('circ', filters);
+            }, i * speed);
+        })(i);
+    }
+
+}
+
+function generateCircle(r) {
+
+	var baseVal = 0;
+	var heightVal = 0;
+	var prevHeight;
+	var circJson = [];
+	var sliderOptions = '';
+
+	for (i=0;i<r.length;i++) {
+
+		baseVal = heightVal;
+		heightVal = heightVal + r[i].height*30;
+		yearVal = r[i].year;
+		popVal = r[i].pop;
+		geoId = r[i].id;
+
+		let center = [-0, 0];
+		let radius = getRadius(popVal*2);
+
+		let options = {steps: 100, units: 'kilometers', properties: {geo_id: geoId, height_num: heightVal, base_num: baseVal, year_num: yearVal}};
+		let circle = turf.circle(center, radius, options);
+
+		circJson.push(circle);
+		years.push({id: geoId, year: yearVal, pop: popVal});
+
+		if (i == r.length-1) {
+			buildJson(circJson);
+		}
+	}
+}
+
+function buildJson(json) {
+	years.reverse();
+
+	var circLayer = turf.featureCollection(json);
+
+	map.on('load', function () {
+		map.addSource('circSource', { type: 'geojson', data: circLayer });
+		map.setLight({ intensity: 0.05});
+		addLayer();
+	});
+	
+}
+
+
+function addLayer() {
+
+	map.addLayer({
+		'id': 'circ',
+		'type': 'fill-extrusion',
+		'source': 'circSource',
+		'layout': {},
+		'paint': {
+			'fill-extrusion-color': {
+				 property: 'geo_id',
+				 stops: [[1, '#cccccc'], [140, '#333333']]
+			},
+			'fill-extrusion-height': ['get', 'height_num'],
+			'fill-extrusion-base': ['get', 'base_num'],
+			'fill-extrusion-opacity': 1
+		}
+	});
+ 
+	document.getElementById('slider').addEventListener('input', function(e) {
+	let year = parseInt(e.target.value, 10);
+		filterBy(year);
+	});
+
+}
+
+function filterBy(y) {
+ 
+	var filters = ['<=', 'geo_id', y];
+	map.setFilter('circ', filters);
+
+	document.getElementById('sliderValuesHold').style.display = 'block';
+	 
+	if (years[y-1].year <= 0 ) {
+		document.getElementById('year').textContent = (years[y-1].year)*-1 + ' BCE';
+	} else {
+		document.getElementById('year').textContent = years[y-1].year;	
+	}
+
+	document.getElementById('population').textContent = formatNumber(years[y-1].pop) + ' million';
+}
+
+
+function formatNumber(num) {
+  	return num.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,')
+}
+
+$(document).ready(function() {
+    $.ajax({
+        type: "GET",
+        url: './data/pop.json',
+        dataType: "json",
+        success: function(data) {
+        	// console.log('data', data);
+        	generateCircle(data);
+        }
+     });
+});
+
+</script>
+ 
+</body>
+</html>
