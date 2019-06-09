@@ -197,12 +197,18 @@ function buildJson(json) {
 
 	var circLayer = turf.featureCollection(json);
 
+	buildMap(circLayer);
+	
+}
+
+function buildMap(layer) {
+	
 	map.on('load', function () {
-		map.addSource('circSource', { type: 'geojson', data: circLayer });
+		// console.log('map load', map.loaded());
+		map.addSource('circSource', { type: 'geojson', data: layer });
 		map.setLight({ intensity: 0.05});
 		addLayer();
 	});
-	
 }
 
 
