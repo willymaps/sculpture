@@ -6,7 +6,8 @@
 <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
 <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-<script src="./js/mapbox-gl-dev.js"></script>
+<script src='https://api.tiles.mapbox.com/mapbox-gl-js/v1.0.0/mapbox-gl.js'></script>
+<link href='https://api.tiles.mapbox.com/mapbox-gl-js/v1.0.0/mapbox-gl.css' rel='stylesheet' />
 <style>
 
 #mapInset {
@@ -104,9 +105,9 @@ mapboxgl.accessToken = 'pk.eyJ1Ijoid2lsbGlhbWJlbmRhdmlzIiwiYSI6IlVrb3BGVzQifQ.je
 var map = new mapboxgl.Map({
 	container: 'map',
 	style: 'mapbox://styles/mapbox/empty-v8',
-	center: [-0, 9],
-	pitch: 80,
-	zoom: 5.64,
+	center: [-0, 3],
+	pitch: 60,
+	zoom: 6.35,
 	interactive: false
 });
 
@@ -128,9 +129,9 @@ map.on('click', function () {
 	} else {
 		toggleOverhead = false;
 		map.flyTo({
-			center: [-0, 9],
-			pitch: 80,
-			zoom: 5.64,
+			center: [-0, 3],
+			pitch: 60,
+			zoom: 6.35,
 			speed:0.8
 		});
 	}
