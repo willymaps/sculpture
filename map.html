@@ -197,7 +197,15 @@ function buildJson(json) {
 
 	var circLayer = turf.featureCollection(json);
 
-	buildMap(circLayer);
+	if (circLayer.features.length == 140) {
+
+		buildMap(circLayer);
+
+	} else {
+
+		window.setTimeout(buildJson(json), 100);
+
+	}
 	
 }
 
